@@ -1,4 +1,4 @@
-fuses_lo = 0x21
+fuses_lo = 0xff
 fuses_hi = 0x80
 fuses_ext = 0x00
 lock_byte = 0x00
