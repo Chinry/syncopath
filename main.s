@@ -279,7 +279,6 @@ interrupt0:
 	reti
 
 skip_INT0_ret:
-	cli
 	in r17, GIMSK
 	andi r17, ~(1<<PCIE)
 	out GIMSK, r17 ;disable pin interrupts
@@ -316,7 +315,6 @@ skip_INT0_ret:
 	out TIMSK, r17
 
 	
-	sei
 	reti
 
 
@@ -325,13 +323,13 @@ skip_INT0_ret:
 
 timer_0compareA:
 
-	cli
-	
+	cli	
 
 	in r17, TIMSK
 	andi r17, ~(1<<OCIE0A) ;disable compare interrupt
 	out TIMSK, r17
-
+	
+	sei
 
 	ldi r17, 0
 	out TCNT0, r17 ;initialize the counter to 0
@@ -353,7 +351,6 @@ timer_0compareA:
 	ldi r17, 1<<USIOIF | 8;
 	out USISR, r17
 
-	sei
 	reti
 
 
@@ -362,7 +359,6 @@ timer_0compareA:
 
 
 USI_overflow:
-	cli
 
 	ldi r17, 0
 	out USICR, r17 ;disable USI
@@ -413,7 +409,6 @@ USI_overflow:
 	ori r17, 1<<PCINT0
 	out PCMSK, r17 ;enable pin change on pin0
 	
-	sei
 	reti
 
 
