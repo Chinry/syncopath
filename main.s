@@ -5,7 +5,7 @@
 .equ	BAUDRATE, 31250
 .equ	CYCLES_PER_BIT, (CLOCK_SPEED / BAUDRATE)
 .equ	FULL_BIT_TICKS, (CYCLES_PER_BIT / 8)
-.equ	TIMER_TICKS, 2
+.equ	TIMER_TICKS, 3
 
 ;ram addressing 
 
@@ -19,7 +19,7 @@
 	rjmp reset		;1
 	rjmp unhandled		;2
 	rjmp interrupt0  	;3
-	rjmp unhandled   	;4
+	rjmp gbclock	   	;4
 	rjmp unhandled    	;5
 	rjmp unhandled   	;6
 	rjmp unhandled    	;7
@@ -43,7 +43,6 @@ reset:
 	ldi r16, 0
 	mov r3, r16
 	mov r4, r16 ;queue to 0
-	mov r5, r16
 	ldi r16, 0x60
 	mov r2, r16
 
@@ -56,12 +55,39 @@ reset:
 	ldi r16, (0<<DDB0)|(1<<DDB1)|(1<<DDB2);initialize the data direction of DB
 	out DDRB, r16 ;write to DDRB register
 
-	;sbi PORTB,PB0 ;enable pullups for input
 
 	sei
 
 	ldi r16, 0 	
 	out USICR, r16 ;disable the USI
+
+
+
+	ldi r16, (1<<CTC1)|(1<<CS12)
+	out TCCR1, r16 ;CTC mode
+	
+
+
+	ldi r16, 61
+	out OCR1C, r16 
+	out OCR1A, r16 
+
+
+
+	ldi r17, 2
+	out TCCR0A, r17 ;CTC mode
+	
+	ldi r17, 2
+	out TCCR0B, r17 ;set the timer rate to clock/8
+
+	;in r17, GTCCR
+	;ori r17, 1 << PSR0
+	;out GTCCR, r17 ;reset the clock prescaler
+
+	ldi r17, TIMER_TICKS
+	;set the count up value to activate in the middle of a start bit
+	out OCR0A, r17 
+
 
 	ldi r16, 1<<PCIF 
 	out GIFR, r16 ;clear the pin change interrupt
@@ -77,31 +103,50 @@ reset:
 	
 
 
+
 	
 execution_loop:
 	mov r16, r4
 	cpi r16, 0 ;check if the queue count is 0
 	breq execution_loop
 	
+
+
 	dec r4	
 	ld r16, X+
 	rcall check_end_buffer
 
 	cpi r16, 0xF8
 	brne execution_loop
+
+
+
+
+wait_end_write:
+	in r16, TIMSK
+	sbrc r16, OCIE1A ;set output compare interrupt
+	rjmp wait_end_write
+
+
+
+
+
 	
-	rcall debug_write_1
+	ldi r16, 0
+	out TCNT1, r16 ;initialize the counter to 0
 
+		
 
+	;zero the count up to 8
 
+	ldi r16, 16
+	mov r5, r16
 
+	cbi PORTB, PB2
 
-;enable timer for the clock 122 prescaled counts on off and switch the 
-	
-
-	
-
-
+	in r16, TIMSK
+	ori r16, 1<<OCIE1A ;set output compare interrupt
+	out TIMSK, r16
 
 
 
@@ -112,10 +157,29 @@ execution_loop:
 
 
 
+gbclock:
+	
+	cli
+	sbic PORTB, PB2
+	rjmp clear_jump
+	sbi PORTB, PB2
+	rjmp time_change
+
+clear_jump:
+	cbi PORTB, PB2
 
 
+time_change:
+	dec r5
+	brne clock_return
+	in r20, TIMSK
+	andi r20, ~(1<<OCIE1A) ;set output compare interrupt
+	out TIMSK, r20
+	
 
-
+clock_return:
+	sei
+	reti
 
 
 
@@ -164,6 +228,195 @@ debug_write_1:
 	cbi PORTB, PB2
 
 	ret
+
+
+
+
+
+
+debug_write_4:
+	sbrc r4,0
+	sbi PORTB, PB1
+	sbrs r4,0
+	cbi PORTB, PB1
+
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r4,1
+	sbi PORTB, PB1
+	sbrs r4,1
+	cbi PORTB, PB1
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r4,2
+	sbi PORTB, PB1
+	sbrs r4,2
+	cbi PORTB, PB1
+	
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+
+	sbrc r4,3
+	sbi PORTB, PB1
+	sbrs r4,3
+	cbi PORTB, PB1
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r4,4
+	sbi PORTB, PB1
+	sbrs r4,4
+	cbi PORTB, PB1
+	
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r4,5
+	sbi PORTB, PB1
+	sbrs r4,5
+	cbi PORTB, PB1
+
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r4,6
+	sbi PORTB, PB1
+	sbrs r4,6
+	cbi PORTB, PB1
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r4,7
+	sbi PORTB, PB1
+	sbrs r4,7
+	cbi PORTB, PB1
+
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	ret
+
+
+
+
+
+debug_write18:
+	sbrc r18,0
+	sbi PORTB, PB1
+	sbrs r18,0
+	cbi PORTB, PB1
+
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r18,1
+	sbi PORTB, PB1
+	sbrs r18,1
+	cbi PORTB, PB1
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r18,2
+	sbi PORTB, PB1
+	sbrs r18,2
+	cbi PORTB, PB1
+	
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+
+	sbrc r18,3
+	sbi PORTB, PB1
+	sbrs r18,3
+	cbi PORTB, PB1
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r18,4
+	sbi PORTB, PB1
+	sbrs r18,4
+	cbi PORTB, PB1
+	
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r18,5
+	sbi PORTB, PB1
+	sbrs r18,5
+	cbi PORTB, PB1
+
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r18,6
+	sbi PORTB, PB1
+	sbrs r18,6
+	cbi PORTB, PB1
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r18,7
+	sbi PORTB, PB1
+	sbrs r18,7
+	cbi PORTB, PB1
+
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	ret
+
+
+
+
+
+
 
 debug_write:
 	sbrc r16,0
@@ -290,19 +543,6 @@ skip_INT0_ret:
 
 	
 	
-	ldi r17, 2
-	out TCCR0A, r17 ;CTC mode
-	
-	ldi r17, 2
-	out TCCR0B, r17 ;set the timer rate to clock/8
-
-	;in r17, GTCCR
-	;ori r17, 1 << PSR0
-	;out GTCCR, r17 ;reset the clock prescaler
-
-	ldi r17, TIMER_TICKS
-	;set the count up value to activate in the middle of a start bit
-	out OCR0A, r17 
 	
 	ldi r17, 0
 	out TCNT0, r17 ;initialize the counter to 0
@@ -367,8 +607,7 @@ USI_overflow:
 	
 
 	
-;	rcall reverse_byte ;reverse the byte sent rewriting register 18
-
+	rcall reverse_byte ;reverse the byte sent rewriting register 18
 
 
 
@@ -381,9 +620,14 @@ USI_overflow:
 	mov r26, r2
 	
 	;write midi to memory
+
 	st X+, r18	
 	rcall check_end_buffer
+	
+
+
 	inc r4 ;increment the counter for the queue		
+
 
 	;save writing address
 	mov r3, r27
@@ -414,20 +658,21 @@ USI_overflow:
 
 
 reverse_byte:
-	;only use r18 and r0
-	mov r0, r18
-	andi r18, 0x55
-	eor r0, r18
-	lsr r18
-	brcc skip_carry_clear
-	lsl r0
-skip_carry_clear:
-	adc r0, r18
-	mov r18, r0
-	andi r18, 0x99
-	eor r0, r18
-	swap r0
-	or r18, r0
+	mov    r17, r18            
+	add    r17, r17            
+	andi   r17, 0xAA           
+	lsr    r18                 
+	andi   r18, 0x55           
+	or     r17, r18            
+	mov    r18, r17            
+	add    r18, r18            
+	add    r18, r18            
+	andi   r18, 0xCC           
+	lsr    r17                 
+	lsr    r17                 
+	andi   r17, 0x33           
+	or     r18, r17            
+	swap   r18                 
 	ret	
 
 
