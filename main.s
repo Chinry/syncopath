@@ -15,7 +15,7 @@
 	rjmp reset		;1
 	rjmp unhandled		;2
 	rjmp interrupt0  	;3
-	rjmp gbclock	   	;4
+	rjmp unhandled;;gbclock	   	;4
 	rjmp unhandled    	;5
 	rjmp unhandled   	;6
 	rjmp unhandled    	;7
@@ -50,6 +50,10 @@ reset:
 	ldi r16, (0<<DDB0)|(1<<DDB1)|(1<<DDB2);initialize the data direction of DB
 	out DDRB, r16 ;write to DDRB register
 
+	sbi PORTB, PB2
+	nop
+	nop
+	cbi PORTB, PB2
 
 	sei
 
@@ -57,15 +61,15 @@ reset:
 	out USICR, r16 ;disable the USI
 
 
-
-	ldi r16, (1<<CTC1)|(1<<CS12)
+	ldi r16, 0b10000100
 	out TCCR1, r16 ;CTC mode
 	
 
 
 	ldi r16, 10
-	out OCR1C, r16 
 	out OCR1A, r16 
+	ldi r16, 11
+	out OCR1C, r16 
 
 
 
@@ -76,9 +80,6 @@ reset:
 	out TCCR0B, r17 ;set the timer rate to clock/8
 
 
-	ldi r17, TIMER_TICKS
-	;set the count up value to activate in the middle of a start bit
-	out OCR0A, r17 
 
 
 	ldi r16, 1<<PCIF 
@@ -113,19 +114,20 @@ execution_loop:
 
 gbclock:
 	
-	cli
-	sbic PORTB, PB2
-	rjmp clear_jump
-	sbi PORTB, PB2
-	rjmp time_change
 
-clear_jump:
-	cbi PORTB, PB2
+	cli
+;	sbis PORTB, PB2
+;	rjmp clear_jump
+;	sbi PORTB, PB2
+;	rjmp time_change
+
+;clear_jump:
+;	cbi PORTB, PB2
 
 
 time_change:
-	dec r5
-	brne clock_return
+;	dec r5
+;	brne clock_return
 	in r20, TIMSK
 	andi r20, ~(1<<OCIE1A) ;set output compare interrupt
 	out TIMSK, r20
@@ -166,6 +168,9 @@ skip_INT0_ret:
 	out PCMSK, r17 ;disable pin change on pin0
 
 	
+	ldi r17, TIMER_TICKS
+	;set the count up value to activate in the middle of a start bit
+	out OCR0A, r17 
 	
 	
 	ldi r17, 0
@@ -310,7 +315,6 @@ start_send_tick_timer:
 	ldi r17, 16
 	mov r5, r17
 
-	cbi PORTB, PB2
 
 	in r17, TIMSK
 	ori r17, 1<<OCIE1A ;set output compare interrupt
