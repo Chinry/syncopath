@@ -123,21 +123,25 @@ execution_loop:
 	sei
 
 
-	ldi ZH, 0x0F ;lookuptable high byte
-	mov ZL, r19 ;set up the low byte for a lookup
-	swap ZL
-	andi ZL, 0xF0
-	
+	ldi ZH, (((0xff00 & 0x0200) >> 8) >> 1) ;lookuptable high byte
+	ldi ZL, 0
+
+	andi r19, 0x0F
+	add ZL, r19
+
 	ijmp
+		
 
 not_an_f:
 	sei
-	ldi ZH, 0x0E ;lookuptable high byte
+	ldi ZH, 0x03 ;lookuptable high byte
 	mov ZL,r19
 	swap ZL	
 	ori ZL, 0xF0
 	lpm r19,Z
 	mov r2,r19
+
+
 
 	rjmp execution_loop
 
@@ -269,9 +273,8 @@ USI_overflow:
 	ldi r17, 0
 	out USICR, r17 ;disable USI
 	
-
-;	tst r2
-;	brne skip_byte
+	and r2,r2
+	brne skip_byte
 
 
 
@@ -302,7 +305,9 @@ USI_overflow:
 	pop r27
 
 ;skip_byte:
-;	dec r2
+	and r2,r2
+	breq return_from_tick_start
+	dec r2
 
 return_from_tick_start:
 
@@ -330,7 +335,7 @@ return_from_tick_start:
 
 start_send_tick_timer:
 
-
+	
 	and r0,r0
 	breq return_from_tick_start
 		
@@ -394,9 +399,50 @@ quick_ret:
 	ret
 
 
-.include "debug.inc"
 
-.org 0x0EF0
+
+.org 0x0200
+start_stop_table:
+	rjmp execution_loop ;0
+	rjmp execution_loop  ;1
+	rjmp inc_2_twice ;2
+	rjmp inc_2_once  ;3
+	rjmp execution_loop ;4
+	rjmp execution_loop ;5
+	rjmp execution_loop ;6
+	rjmp execution_loop ;7
+	rjmp execution_loop ;8
+	rjmp execution_loop ;9
+	rjmp inc_0 ;A
+	rjmp inc_0;B
+	rjmp zero_0;C
+	rjmp execution_loop;D
+	rjmp execution_loop;E
+	rjmp execution_loop;F
+
+
+
+inc_2_twice:
+	inc r2
+inc_2_once:
+	inc r2
+	rjmp execution_loop
+
+
+
+
+inc_0:
+	inc r0
+	rjmp execution_loop
+
+zero_0:
+	eor r0,r0
+	rjmp execution_loop
+
+
+
+
+.org 0x03F0
 .byte 1 ;0
 .byte 1 ;1
 .byte 1 ;2
@@ -416,45 +462,4 @@ quick_ret:
 
 
 
-;;lookuptable
-.org 0x0F00  
-	rjmp execution_loop
-.org 0x0F10  
-	inc r2
-	rjmp execution_loop
-.org 0x0F20  
-	inc r2
-	inc r2
-	rjmp execution_loop
-.org 0x0F30  
-	inc r2
-	rjmp execution_loop
-.org 0x0F40  
-	rjmp execution_loop
-.org 0x0F50  
-	rjmp execution_loop
-.org 0x0F60  
-	rjmp execution_loop
-.org 0x0F70 
-	rjmp execution_loop
-.org 0x0F80  ;unhandled here
-	rjmp execution_loop
-.org 0x0F90  
-	rjmp execution_loop
-.org 0x0FA0  ;continue sequence
-	inc r0
-	rjmp execution_loop
-.org 0x0FB0 ;start sequence
-	inc r0
-	rjmp execution_loop
-.org 0x0FC0 ;stop sequence
-	eor r0,r0
-	mov r21,r0
-	rcall debug_write18
-	rjmp execution_loop
-.org 0x0FD0 
-	rjmp execution_loop
-.org 0x0FE0 
-	rjmp execution_loop
-.org 0x0FF0 
-	rjmp execution_loop
+.include "debug.inc"
