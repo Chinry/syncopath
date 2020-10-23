@@ -15,7 +15,7 @@
 	rjmp reset		;1
 	rjmp unhandled		;2
 	rjmp interrupt0  	;3
-	rjmp unhandled;;gbclock	   	;4
+	rjmp gbclock	   	;4
 	rjmp unhandled    	;5
 	rjmp unhandled   	;6
 	rjmp unhandled    	;7
@@ -43,17 +43,21 @@ reset:
 	ldi r16, 0x5F
 	out SPL, r16
 
+	;load the indirect midi buffer address to start at beginning of sram
+	ldi r27, 0
+	ldi r26, 0x60		
+	
+	;init the writing location
+	ldi r16, 0
+	mov r7, r16
+	mov r4, r16 ;queue to 0
+	ldi r16, 0x60
+	mov r6, r16
 
 
-
-
-	ldi r16, (0<<DDB0)|(1<<DDB1)|(1<<DDB2);initialize the data direction of DB
+	ldi r16, (0<<DDB0)|(1<<DDB1)|(1<<DDB2)|(1<<DDB5);initialize the data direction of DB
 	out DDRB, r16 ;write to DDRB register
 
-	sbi PORTB, PB2
-	nop
-	nop
-	cbi PORTB, PB2
 
 	sei
 
@@ -99,10 +103,41 @@ reset:
 
 	
 execution_loop:
+	sei
 	
 	nop
+	cli
+	and r4,r4
+	breq execution_loop
+	dec r4
 
 
+	ld r19, X+	
+	rcall check_end_buffer
+
+	mov ZL, r19
+	andi ZL, 0xF0
+	cli
+	cpi ZL, 0xF0
+	brne not_an_f
+	sei
+
+
+	ldi ZH, 0x0F ;lookuptable high byte
+	mov ZL, r19 ;set up the low byte for a lookup
+	swap ZL
+	andi ZL, 0xF0
+	
+	ijmp
+
+not_an_f:
+	sei
+	ldi ZH, 0x0E ;lookuptable high byte
+	mov ZL,r19
+	swap ZL	
+	ori ZL, 0xF0
+	lpm r19,Z
+	mov r2,r19
 
 	rjmp execution_loop
 
@@ -115,19 +150,20 @@ execution_loop:
 gbclock:
 	
 
-	cli
-;	sbis PORTB, PB2
-;	rjmp clear_jump
-;	sbi PORTB, PB2
-;	rjmp time_change
 
-;clear_jump:
-;	cbi PORTB, PB2
+	cli
+	sbis PORTB, PB5
+	rjmp clear_jump
+	cbi PORTB, PB5
+	rjmp time_change
+
+clear_jump:
+	sbi PORTB, PB5
 
 
 time_change:
-;	dec r5
-;	brne clock_return
+	dec r5
+	brne clock_return
 	in r20, TIMSK
 	andi r20, ~(1<<OCIE1A) ;set output compare interrupt
 	out TIMSK, r20
@@ -234,13 +270,12 @@ USI_overflow:
 	out USICR, r17 ;disable USI
 	
 
-	tst r2
-	brne skip_byte
+;	tst r2
+;	brne skip_byte
 
 
 
 	in r18, USIBR ;store the recieved byte
-	
 	
 	
 	rcall reverse_byte ;reverse the byte sent rewriting register 18
@@ -248,33 +283,26 @@ USI_overflow:
 
 	cpi r18, 0xF8
 	breq start_send_tick_timer
-	
-	mov r30, r18
-	andi r30, 0xF0
-	cpi r30, 0xF0
-	brne not_an_f
+		
 
+	push r27
+	push r26
 
-	ldi r31, 0x0F ;lookuptable high byte
-	mov r30, r18 ;set up the low byte for a lookup
-	swap r30
-	andi r30, 0xF0
-	ijmp 
+	mov r27, r7
+	mov r26, r6
 
+	st X+, r18
+	rcall check_end_buffer
+	inc r4
 
-not_an_f:
-	
-	ldi r31, 0x0E ;lookuptable high byte
-	mov r30,r18
-	swap r30	
-	ori r30, 0xF0
-	lpm r19,Z
-	mov r2,r19
-	
+	mov r7, r27
+	mov r6, r26
 
+	pop r26
+	pop r27
 
-skip_byte:
-	dec r2
+;skip_byte:
+;	dec r2
 
 return_from_tick_start:
 
@@ -303,7 +331,7 @@ return_from_tick_start:
 start_send_tick_timer:
 
 
-	tst r0
+	and r0,r0
 	breq return_from_tick_start
 		
 	ldi r17, 0
@@ -353,11 +381,22 @@ unhandled:
 	reti
 
 
+check_end_buffer:
+	cpi r27, 0x01
+	brne quick_ret
+	cpi r26, 0x60
+	brne quick_ret
+
+	ldi r27, 0
+	ldi r26, 0x60
+		
+quick_ret:
+	ret
 
 
 .include "debug.inc"
 
-.org 0x0EF0, 0x00
+.org 0x0EF0
 .byte 1 ;0
 .byte 1 ;1
 .byte 1 ;2
@@ -378,42 +417,44 @@ unhandled:
 
 
 ;;lookuptable
-.org 0x0F00, 0x00
-	rjmp return_from_tick_start
-.org 0x0F10, 0x00
+.org 0x0F00  
+	rjmp execution_loop
+.org 0x0F10  
 	inc r2
-	rjmp return_from_tick_start
-.org 0x0F20, 0x00
+	rjmp execution_loop
+.org 0x0F20  
 	inc r2
 	inc r2
-	rjmp return_from_tick_start
-.org 0x0F30, 0x00
+	rjmp execution_loop
+.org 0x0F30  
 	inc r2
-	rjmp return_from_tick_start
-.org 0x0F40, 0x00
-	rjmp return_from_tick_start
-.org 0x0F50, 0x00
-	rjmp return_from_tick_start
-.org 0x0F60, 0x00
-	rjmp return_from_tick_start
-.org 0x0F70, 0x00
-	rjmp return_from_tick_start
-.org 0x0F80, 0x00 ;unhandled here
-	rjmp return_from_tick_start
-.org 0x0F90, 0x00
-	rjmp return_from_tick_start
-.org 0x0FA0, 0x00 ;continue sequence
+	rjmp execution_loop
+.org 0x0F40  
+	rjmp execution_loop
+.org 0x0F50  
+	rjmp execution_loop
+.org 0x0F60  
+	rjmp execution_loop
+.org 0x0F70 
+	rjmp execution_loop
+.org 0x0F80  ;unhandled here
+	rjmp execution_loop
+.org 0x0F90  
+	rjmp execution_loop
+.org 0x0FA0  ;continue sequence
 	inc r0
-	rjmp return_from_tick_start
-.org 0x0FB0, 0x00 ;start sequence
+	rjmp execution_loop
+.org 0x0FB0 ;start sequence
 	inc r0
-	rjmp return_from_tick_start
-.org 0x0FC0, 0x00 ;stop sequence
+	rjmp execution_loop
+.org 0x0FC0 ;stop sequence
 	eor r0,r0
-	rjmp return_from_tick_start
-.org 0x0FD0, 0x00
-	rjmp return_from_tick_start
-.org 0x0FE0, 0x00
-	rjmp return_from_tick_start
-.org 0x0FF0, 0x00
-	rjmp return_from_tick_start
+	mov r21,r0
+	rcall debug_write18
+	rjmp execution_loop
+.org 0x0FD0 
+	rjmp execution_loop
+.org 0x0FE0 
+	rjmp execution_loop
+.org 0x0FF0 
+	rjmp execution_loop
