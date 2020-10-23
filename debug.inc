@@ -141,9 +141,9 @@ debug_write_4:
 
 
 debug_write18:
-	sbrc r18,0
+	sbrc r21,7
 	sbi PORTB, PB1
-	sbrs r18,0
+	sbrs r21,7
 	cbi PORTB, PB1
 
 
@@ -152,9 +152,9 @@ debug_write18:
 	nop
 	cbi PORTB, PB2
 
-	sbrc r18,1
+	sbrc r21,6
 	sbi PORTB, PB1
-	sbrs r18,1
+	sbrs r21,6
 	cbi PORTB, PB1
 
 	nop
@@ -162,30 +162,9 @@ debug_write18:
 	nop
 	cbi PORTB, PB2
 
-	sbrc r18,2
+	sbrc r21,5
 	sbi PORTB, PB1
-	sbrs r18,2
-	cbi PORTB, PB1
-	
-	nop
-	sbi PORTB, PB2
-	nop
-	cbi PORTB, PB2
-
-
-	sbrc r18,3
-	sbi PORTB, PB1
-	sbrs r18,3
-	cbi PORTB, PB1
-
-	nop
-	sbi PORTB, PB2
-	nop
-	cbi PORTB, PB2
-
-	sbrc r18,4
-	sbi PORTB, PB1
-	sbrs r18,4
+	sbrs r21,5
 	cbi PORTB, PB1
 	
 	nop
@@ -193,9 +172,30 @@ debug_write18:
 	nop
 	cbi PORTB, PB2
 
-	sbrc r18,5
+
+	sbrc r21,4
 	sbi PORTB, PB1
-	sbrs r18,5
+	sbrs r21,4
+	cbi PORTB, PB1
+
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r21,3
+	sbi PORTB, PB1
+	sbrs r21,3
+	cbi PORTB, PB1
+	
+	nop
+	sbi PORTB, PB2
+	nop
+	cbi PORTB, PB2
+
+	sbrc r21,2
+	sbi PORTB, PB1
+	sbrs r21,2
 	cbi PORTB, PB1
 
 
@@ -204,9 +204,9 @@ debug_write18:
 	nop
 	cbi PORTB, PB2
 
-	sbrc r18,6
+	sbrc r21,1
 	sbi PORTB, PB1
-	sbrs r18,6
+	sbrs r21,1
 	cbi PORTB, PB1
 
 	nop
@@ -214,9 +214,9 @@ debug_write18:
 	nop
 	cbi PORTB, PB2
 
-	sbrc r18,7
+	sbrc r21,0
 	sbi PORTB, PB1
-	sbrs r18,7
+	sbrs r21,0
 	cbi PORTB, PB1
 
 
@@ -232,93 +232,6 @@ debug_write18:
 
 
 
-
-debug_write:
-	sbrc r16,0
-	sbi PORTB, PB1
-	sbrs r16,0
-	cbi PORTB, PB1
-
-
-	nop
-	sbi PORTB, PB2
-	nop
-	cbi PORTB, PB2
-
-	sbrc r16,1
-	sbi PORTB, PB1
-	sbrs r16,1
-	cbi PORTB, PB1
-
-	nop
-	sbi PORTB, PB2
-	nop
-	cbi PORTB, PB2
-
-	sbrc r16,2
-	sbi PORTB, PB1
-	sbrs r16,2
-	cbi PORTB, PB1
-	
-	nop
-	sbi PORTB, PB2
-	nop
-	cbi PORTB, PB2
-
-
-	sbrc r16,3
-	sbi PORTB, PB1
-	sbrs r16,3
-	cbi PORTB, PB1
-
-	nop
-	sbi PORTB, PB2
-	nop
-	cbi PORTB, PB2
-
-	sbrc r16,4
-	sbi PORTB, PB1
-	sbrs r16,4
-	cbi PORTB, PB1
-	
-	nop
-	sbi PORTB, PB2
-	nop
-	cbi PORTB, PB2
-
-	sbrc r16,5
-	sbi PORTB, PB1
-	sbrs r16,5
-	cbi PORTB, PB1
-
-
-	nop
-	sbi PORTB, PB2
-	nop
-	cbi PORTB, PB2
-
-	sbrc r16,6
-	sbi PORTB, PB1
-	sbrs r16,6
-	cbi PORTB, PB1
-
-	nop
-	sbi PORTB, PB2
-	nop
-	cbi PORTB, PB2
-
-	sbrc r16,7
-	sbi PORTB, PB1
-	sbrs r16,7
-	cbi PORTB, PB1
-
-
-	nop
-	sbi PORTB, PB2
-	nop
-	cbi PORTB, PB2
-
-	ret
 
 
 
